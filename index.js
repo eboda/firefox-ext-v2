@@ -55,7 +55,36 @@ var shortcutHotKey = function () {
 shortcutHotKey.set();
 simplePrefs.on('wallabagShortcutKey', shortcutHotKey.reset);
 
-function handleChange() {
+
+// save current page context menu
+var contextMenu = require("sdk/context-menu")
+contextMenu.Item({
+  label: "Bag it!",
+  context: contextMenu.PageContext(),
+  contentScript: 'self.on("click", function () {' +
+                 '  self.postMessage();' +
+                 '});',
+  onMessage: function () {
+    handleChange();
+  }
+});
+
+// save link context menu
+var contextMenu = require("sdk/context-menu")
+contextMenu.Item({
+  label: "Bag it!",
+  context: contextMenu.SelectorContext("a[href]"),
+  contentScript: 'self.on("click", function (node) {' +
+                 '  self.postMessage(node.href);' +
+                 '});',
+  onMessage: function (url) {
+    handleChange(url);
+  }
+});
+
+function handleChange(url) {
+  current_url = (typeof url === 'undefined') ? tabs.activeTab.url : url;
+
   // if the wallabag server is not defined (unreachable or no connection)
   if (! wallabag_server) {
     console.log("wallabag server undefined, checking configuration…");
@@ -102,7 +131,7 @@ function handleChange() {
     save_panel.show({
         position: button
     });
-    server.post(wallabag_server, tabs.activeTab.url).then(function(data) {
+    server.post(wallabag_server, current_url).then(function(data) {
       save.send_post(save_panel, {
         success: true
       });
